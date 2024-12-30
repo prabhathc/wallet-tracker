@@ -7,11 +7,11 @@ import {
   Badge,
   Flex,
 } from '@tremor/react';
-import { TokenData } from '../utils/solana';
+import { TokenBalance } from '../utils/solana';
 
 interface TokenListProps {
   className?: string;
-  tokens: TokenData[];
+  tokens: TokenBalance[];
 }
 
 export default function TokenList({ className, tokens }: TokenListProps) {
@@ -38,11 +38,19 @@ export default function TokenList({ className, tokens }: TokenListProps) {
                   </div>
                   <div className="text-right">
                     <Text className="font-medium">
-                      {token.balance.toLocaleString(undefined, {
+                      {token.amount.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: token.decimals
                       })}
                     </Text>
+                    {token.usd_value > 0 && (
+                      <Text className="text-gray-500 text-sm">
+                        ${token.usd_value.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        })}
+                      </Text>
+                    )}
                   </div>
                 </div>
               </ListItem>
