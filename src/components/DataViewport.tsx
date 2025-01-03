@@ -55,6 +55,39 @@ const DataViewport: React.FC<DataViewportProps> = ({ data, onTimeWindowChange })
       return point.date >= cutoff;
     });
 
+  // Ensure we have at least two data points and interpolate if needed
+  const processedData = (() => {
+    if (filteredData.length === 0) return [];
+    if (filteredData.length === 1) {
+      // If only one point, duplicate it to show a flat line
+      return [
+        filteredData[0],
+        { ...filteredData[0], date: Date.now() }
+      ];
+    }
+
+    // Fill gaps between data points
+    const result = [];
+    for (let i = 0; i < filteredData.length - 1; i++) {
+      const current = filteredData[i];
+      const next = filteredData[i + 1];
+      result.push(current);
+
+      // If gap is more than 2 hours, add interpolated point
+      if (next.date - current.date > 2 * 60 * 60 * 1000) {
+        const interpolated = {
+          date: current.date + (next.date - current.date) / 2,
+          solValue: (current.solValue + next.solValue) / 2,
+          usdValue: (current.usdValue + next.usdValue) / 2,
+          hasTransaction: false
+        };
+        result.push(interpolated);
+      }
+    }
+    result.push(filteredData[filteredData.length - 1]);
+    return result;
+  })();
+
   return (
     <div className="flex flex-col h-full gap-6">
       <div className="bg-[#151926]/50 backdrop-blur-xl rounded-xl border border-[#1E2233]/50 p-4">
@@ -87,7 +120,7 @@ const DataViewport: React.FC<DataViewportProps> = ({ data, onTimeWindowChange })
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart 
-              data={filteredData}
+              data={processedData}
               margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
             >
               <defs>

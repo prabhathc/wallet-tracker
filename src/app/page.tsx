@@ -242,11 +242,11 @@ export default function Home() {
     try {
       const data = await getWalletData(walletData.wallet.address, days);
       setWalletData(data);
-      if (data.errors?.length > 0) {
+      if (data.errors && data.errors.length > 0) {
         setTransactionErrors(data.errors);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error fetching transactions';
+    } catch (err: any) {
+      const errorMessage = err.message || 'Error fetching transactions';
       setTransactionErrors([errorMessage]);
     } finally {
       setIsRetryingTransactions(false);
@@ -268,13 +268,22 @@ export default function Home() {
     try {
       const data = await getWalletData(walletAddress, 1);
       setWalletData(data);
-      if (data.errors?.length > 0) {
+      if (data.errors && data.errors.length > 0) {
         setTransactionErrors(data.errors);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error fetching wallet data';
+    } catch (err: any) {
+      let errorMessage = 'Error fetching wallet data';
+      
+      // Handle specific error cases
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        errorMessage = 'Unable to connect to server. Please check if the backend is running on port 3001.';
+      } else if (err.message.includes('HTTP error!')) {
+        errorMessage = `Server error: ${err.message}`;
+      } else {
+        errorMessage = err.message || 'Unknown error occurred';
+      }
+      
       setError(errorMessage);
-      // Reset UI state on error
       setIsLoading(false);
       return;
     }
@@ -283,19 +292,19 @@ export default function Home() {
   };
 
   const handleRetryTransactions = async () => {
-    if (!walletData) return;
+    if (!walletData?.wallet?.address) return;
     
     setIsRetryingTransactions(true);
     setTransactionErrors([]);
     
     try {
-      const data = await getWalletData(walletData.wallet.address);
+      const data = await getWalletData(walletData.wallet.address, currentTimeWindow);
       setWalletData(data);
-      if (data.errors?.length > 0) {
+      if (data.errors && data.errors.length > 0) {
         setTransactionErrors(data.errors);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error fetching transactions';
+    } catch (err: any) {
+      const errorMessage = err.message || 'Error fetching transactions';
       setTransactionErrors([errorMessage]);
     } finally {
       setIsRetryingTransactions(false);
@@ -473,35 +482,14 @@ export default function Home() {
             {/* DataViewport Component */}
             <DataViewport 
               data={{
-                balanceHistory: (() => {
-                  if (!walletData?.transactions?.length || !walletData.wallet) return [];
-                  
-                  const currentSOLPrice = walletData.wallet.sol_usd_value / walletData.wallet.sol_balance;
-                  const currentTokenValue = walletData.wallet.total_usd_value - walletData.wallet.sol_usd_value;
-                  
-                  const sortedTxs = [...walletData.transactions].sort((a, b) => a.block_time - b.block_time);
-                  
-                  const points = sortedTxs.map(tx => ({
-                    date: tx.block_time * 1000,
-                    solValue: tx.running_balance ?? 0,
-                    usdValue: (tx.running_balance ?? 0) * currentSOLPrice,
-                    tokenValue: currentTokenValue,
-                    hasTransaction: true
-                  }));
-                  
-                  points.push({
-                    date: Date.now(),
-                    solValue: walletData.wallet.sol_balance,
-                    usdValue: walletData.wallet.sol_usd_value,
-                    tokenValue: currentTokenValue,
-                    hasTransaction: false
-                  });
-                  
-                  return points;
-                })(),
+                balanceHistory: walletData?.wallet?.balance_history?.map(point => ({
+                  date: point.date,
+                  solValue: point.solValue,
+                  usdValue: point.solValue * (walletData.wallet.sol_usd_value / walletData.wallet.sol_balance),
+                  hasTransaction: point.hasTransaction
+                })) || [],
                 transactions: (walletData?.transactions || []).map(tx => ({
                   ...tx,
-                  running_balance: tx.running_balance ?? null,
                   direction: tx.from === walletData?.wallet?.address ? 'out' : 
                             tx.to === walletData?.wallet?.address ? 'in' : 
                             tx.type === 'SWAP' ? 'swap' : 'unknown'
