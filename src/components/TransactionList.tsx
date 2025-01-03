@@ -1,5 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, RefreshCw, Coins, CircleDollarSign, CircleDot } from 'lucide-react';
-import { Transaction } from '@/types/transaction';
+import { Transaction } from './TransactionItem';
 
 const getTransactionIcon = (tx: Transaction) => {
   if (tx.direction === 'in') {

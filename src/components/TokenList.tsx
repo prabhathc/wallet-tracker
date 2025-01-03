@@ -43,9 +43,9 @@ export default function TokenList({ className, tokens }: TokenListProps) {
                         maximumFractionDigits: token.decimals
                       })}
                     </Text>
-                    {token.usd_value > 0 && (
+                    {token.value_usd !== undefined && token.value_usd > 0 && (
                       <Text className="text-gray-500 text-sm">
-                        ${token.usd_value.toLocaleString(undefined, {
+                        ${token.value_usd.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2
                         })}
